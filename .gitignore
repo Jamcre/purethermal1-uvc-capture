@@ -3,3 +3,4 @@ config.*
 stamp-h1
 libtool
 *.o
+.DS_Store
