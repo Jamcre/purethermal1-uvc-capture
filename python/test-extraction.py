@@ -142,12 +142,19 @@ def main():
                     data = q.get(True, 500)
                     if data is None:
                         break
+                     
                         
                     thermal_data = data.copy()
+                    conv_data = ktof(thermal_data) 
+                    #print(conv_data[:5, :5])
+                    # print("Raw Y16 Data Sample (Top-Left 5x5 pixels):")
+                    # print(thermal_data[:5, :5]) 
                     display_data = cv2.resize(data[:,:], (640, 480))
                     map_idx = cv2.getTrackbarPos("Colormap", "Lepton Radiometry")
                     current_colormap = COLORMAPS[map_idx][1]
                     img = raw_to_8bit(display_data)
+                    # print("Raw Y16 Data Sample (Top-Left 5x5 pixels):")
+                    # print(img[:5, :5])
                     
                     minVal, maxVal, minLoc, maxLoc = cv2.minMaxLoc(thermal_data)
                     minLoc = (int(minLoc[0]*4), int(minLoc[1]*4))
@@ -182,12 +189,13 @@ def main():
                         timestamp = time.strftime("%Y%m%d_%H%M%S")
                         
                         # Convert raw thermal data to Fahrenheit
-                        raw_fahrenheit = 1.8 * ((thermal_data.astype(np.float32) - 27315) / 100.0 + 32.0)
-                        np.savetxt(f"raw_thermal_{timestamp}.csv", raw_fahrenheit, delimiter=",")
+                        #raw_fahrenheit = 1.8 * ((thermal_data.astype(np.float32) - 27315) / 100.0 + 32.0)
+                        np.savetxt(f"raw_thermal_{timestamp}.csv", thermal_data, delimiter=",")
                         
                         # Convert resized display data to Fahrenheit
-                        resized_fahrenheit = 1.8 * ((display_data.astype(np.float32) - 27315) / 100.0 + 32.0)
-                        np.savetxt(f"resized_thermal_{timestamp}.csv", resized_fahrenheit, delimiter=",")
+                        #resized_fahrenheit = 1.8 * ((display_data.astype(np.float32) - 27315) / 100.0 + 32.0)
+                        # ISSUE: 
+                        np.savetxt(f"resized_thermal_{timestamp}.csv", conv_data, delimiter=",")
                         
                         print(f"Saved thermal data at {timestamp}")
                         last_save_time = current_time  # Reset save timer
