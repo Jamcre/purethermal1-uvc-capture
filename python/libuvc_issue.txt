@@ -1,0 +1,4 @@
+# uvc_start_streaming error = -2
+# FIX BELOW
+
+https://github.com/groupgets/purethermal1-uvc-capture/issues/49

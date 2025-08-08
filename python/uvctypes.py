@@ -3,11 +3,11 @@ import platform
 
 try:
   if platform.system() == 'Darwin':
-    libuvc = cdll.LoadLibrary("libuvc.dylib")
+    libuvc = cdll.LoadLibrary("/usr/local/lib/libuvc.so")
   elif platform.system() == 'Linux':
-    libuvc = cdll.LoadLibrary("libuvc.so")
+    libuvc = cdll.LoadLibrary("/usr/local/lib/libuvc.so")
   else:
-    libuvc = cdll.LoadLibrary("libuvc")
+    libuvc = cdll.LoadLibrary("/usr/local/lib/libuvc.so")
 except OSError:
   print("Error: could not find libuvc!")
   exit(1)
