@@ -198,7 +198,7 @@ def main():
 
             # Fullscreen window setup
             cv2.namedWindow('Lepton Radiometry', cv2.WINDOW_NORMAL)
-            cv2.setWindowProperty('Lepton Radiometry', cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+            cv2.setWindowProperty('Lepton Radiometry', cv2.WND_PROP_MAXIMIZE, 1)
             cv2.setMouseCallback('Lepton Radiometry', mouse_callback)
 
             cv2.createTrackbar(
