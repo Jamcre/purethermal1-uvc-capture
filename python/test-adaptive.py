@@ -195,12 +195,10 @@ def main():
             if res < 0:
                 print("uvc_start_streaming failed: {0}".format(res))
                 exit(1)
-          
-          # Window setup - normal window but sized to full screen
+
+            # Fullscreen window setup
             cv2.namedWindow('Lepton Radiometry', cv2.WINDOW_NORMAL)
-            cv2.setWindowProperty('Lepton Radiometry', cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_NORMAL)
-            cv2.resizeWindow('Lepton Radiometry', DISPLAY_WIDTH, DISPLAY_HEIGHT)
-            cv2.moveWindow('Lepton Radiometry', 0, 0)
+            cv2.setWindowProperty('Lepton Radiometry', cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
             cv2.setMouseCallback('Lepton Radiometry', mouse_callback)
 
             cv2.createTrackbar(
