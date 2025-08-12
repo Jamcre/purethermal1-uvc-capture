@@ -36,14 +36,20 @@ def scale_x(val):
 def scale_y(val):
     return int(val * (DISPLAY_HEIGHT / REF_HEIGHT))
 
+# Increased font scale multiplier to 1.8 for bigger text
 def font_scale(relative):
-    return relative * (DISPLAY_HEIGHT / REF_HEIGHT)
+    base_scale = relative * (DISPLAY_HEIGHT / REF_HEIGHT)
+    return base_scale * 1.8
 
 def thickness():
     return max(1, scale_y(1))
 
+# Increased marker size for better visibility
 def marker_size():
-    return max(3, scale_x(10))
+    return max(5, scale_x(15))
+
+# Added margin so text is not cut off at top
+TOP_MARGIN = scale_y(10)
 
 BUF_SIZE = 2
 q = Queue(BUF_SIZE)
@@ -118,13 +124,13 @@ def create_colorbar(min_temp, max_temp, height=None, width=None):
     fs = font_scale(0.45)
     th = max(1, scale_y(1))
 
-    cv2.putText(colorbar, f"{max_temp:.1f} degF", (scale_x(5), scale_y(20)), font, fs, (0,0,0), th+1)
-    cv2.putText(colorbar, f"{min_temp:.1f} degF", (scale_x(5), height - scale_y(10)), font, fs, (0,0,0), th+1)
+    cv2.putText(colorbar, f"{max_temp:.1f} degF", (scale_x(5), TOP_MARGIN + scale_y(10)), font, fs, (0,0,0), th+1)
+    cv2.putText(colorbar, f"{min_temp:.1f} degF", (scale_x(5), height - TOP_MARGIN), font, fs, (0,0,0), th+1)
 
     ticks = 5
     for i in range(height//ticks, height, height//ticks):
         temp = max_temp - (i/height)*(max_temp-min_temp)
-        cv2.putText(colorbar, f"{temp:.1f}", (scale_x(6), i + scale_y(4)), font, font_scale(0.35), (0,0,0), th)
+        cv2.putText(colorbar, f"{temp:.1f}", (scale_x(6), i + TOP_MARGIN//2), font, font_scale(0.35), (0,0,0), th)
 
     return cv2.copyMakeBorder(colorbar, 0, 0, scale_x(3), scale_x(3), cv2.BORDER_CONSTANT, value=(255,255,255))
 
@@ -251,7 +257,7 @@ def main():
 
                     display_img = np.hstack((img, colorbar))
 
-                    cv2.putText(img, f"{COLORMAPS[map_idx][0]}", (scale_x(10), scale_y(30)),
+                    cv2.putText(img, f"{COLORMAPS[map_idx][0]}", (scale_x(10), TOP_MARGIN + scale_y(20)),
                                 cv2.FONT_HERSHEY_SIMPLEX, font_scale(0.6), (255,255,255), thickness())
 
                     cv2.imshow('Lepton Radiometry', display_img)
