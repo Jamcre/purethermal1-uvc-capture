@@ -11,19 +11,22 @@ try:
 except ImportError:
     from queue import Queue
 import platform
+import subprocess
 
-# =========================
-# ADAPTIVE DISPLAY SETTINGS
-# =========================
-# Set your display resolution here (change for different screens)
-DISPLAY_WIDTH = 480   # e.g. Raspberry Pi HAT width
-DISPLAY_HEIGHT = 320  # e.g. Raspberry Pi HAT height
+# ======= Adaptive display resolution detection =======
+def get_display_resolution():
+    try:
+        output = subprocess.check_output('xrandr | grep "\*" | cut -d" " -f4', shell=True).decode()
+        resolution = output.strip().split()[0]
+        width, height = resolution.split('x')
+        return int(width), int(height)
+    except Exception as e:
+        print(f"Failed to detect resolution, fallback to 480x320: {e}")
+        return 480, 320  # fallback
 
-# Fraction of display width reserved for thermal image (rest used by colorbar)
-THERMAL_WIDTH_RATIO = 0.8
+DISPLAY_WIDTH, DISPLAY_HEIGHT = get_display_resolution()
 
-# Reference baseline (used only for relative scaling of fonts/markers)
-# This keeps look similar to original when DISPLAY is 640x480 baseline
+# Reference baseline for scaling (matches your original code baseline)
 REF_WIDTH = 640
 REF_HEIGHT = 480
 
@@ -34,19 +37,14 @@ def scale_y(val):
     return int(val * (DISPLAY_HEIGHT / REF_HEIGHT))
 
 def font_scale(relative):
-    # relative is the font size used on REF_HEIGHT baseline (e.g., 0.5)
     return relative * (DISPLAY_HEIGHT / REF_HEIGHT)
 
 def thickness():
     return max(1, scale_y(1))
 
 def marker_size():
-    # marker length (original was 10)
     return max(3, scale_x(10))
 
-# ================
-# Original globals
-# ================
 BUF_SIZE = 2
 q = Queue(BUF_SIZE)
 
@@ -67,6 +65,8 @@ thermal_data = None
 DIR_RAW = "rawThermalData"
 DIR_NORM = "normalisedThermalData"
 DIR_IMAGES = "thermalImages"
+
+THERMAL_WIDTH_RATIO = 0.8  # percent of width for thermal image
 
 def create_directories():
     for directory in [DIR_RAW, DIR_NORM, DIR_IMAGES]:
@@ -91,9 +91,7 @@ def ktoc(val):
     return (val - 27315) / 100.0
 
 def raw_to_8bit(data):
-    # Do NOT normalize in-place to avoid altering original thermal_data
     norm = cv2.normalize(data, None, 0, 65535, cv2.NORM_MINMAX)
-    # shift down to 8-bit
     shifted = np.right_shift(norm, 8).astype(np.uint8)
     colorized = cv2.applyColorMap(shifted, current_colormap)
     return colorized
@@ -102,13 +100,11 @@ def display_temperature(img, val_k, loc, color):
     val = ktof(val_k)
     fs = font_scale(0.5)
     th = thickness()
-    # putText expects a float font scale; ensure it's not zero
     cv2.putText(img, f"{val:.1f} degF", loc, cv2.FONT_HERSHEY_SIMPLEX, fs, color, th)
     x, y = loc
     cv2.drawMarker(img, (x, y), color, cv2.MARKER_CROSS, marker_size(), th)
 
 def create_colorbar(min_temp, max_temp, height=None, width=None):
-    # Default to display height and remaining width
     if height is None:
         height = DISPLAY_HEIGHT
     if width is None:
@@ -122,11 +118,9 @@ def create_colorbar(min_temp, max_temp, height=None, width=None):
     fs = font_scale(0.45)
     th = max(1, scale_y(1))
 
-    # top / bottom labels with scaled positions
     cv2.putText(colorbar, f"{max_temp:.1f} degF", (scale_x(5), scale_y(20)), font, fs, (0,0,0), th+1)
     cv2.putText(colorbar, f"{min_temp:.1f} degF", (scale_x(5), height - scale_y(10)), font, fs, (0,0,0), th+1)
 
-    # intermediate ticks
     ticks = 5
     for i in range(height//ticks, height, height//ticks):
         temp = max_temp - (i/height)*(max_temp-min_temp)
@@ -136,18 +130,15 @@ def create_colorbar(min_temp, max_temp, height=None, width=None):
 
 def mouse_callback(event, x, y, flags, param):
     global last_click_pos, last_click_temp, last_click_time
-    # Use DISPLAY_WIDTH instead of hardcoded 640
     if event == cv2.EVENT_LBUTTONDOWN and x < DISPLAY_WIDTH:
         last_click_pos = (x, y)
         if thermal_data is not None:
-            # compute scale mapping given current display and thermal array size
             raw_h, raw_w = thermal_data.shape
             thermal_img_width = int(DISPLAY_WIDTH * THERMAL_WIDTH_RATIO)
             scale_x_factor = thermal_img_width / raw_w
             scale_y_factor = DISPLAY_HEIGHT / raw_h
             orig_x = int(x / scale_x_factor)
             orig_y = int(y / scale_y_factor)
-            # clamp to valid indexes
             orig_x = max(0, min(raw_w - 1, orig_x))
             orig_y = max(0, min(raw_h - 1, orig_y))
             last_click_temp = thermal_data[orig_y, orig_x]
@@ -199,9 +190,9 @@ def main():
                 print("uvc_start_streaming failed: {0}".format(res))
                 exit(1)
 
-            # Create a resizable window sized to the target display
+            # Fullscreen window setup
             cv2.namedWindow('Lepton Radiometry', cv2.WINDOW_NORMAL)
-            cv2.resizeWindow('Lepton Radiometry', DISPLAY_WIDTH, DISPLAY_HEIGHT)
+            cv2.setWindowProperty('Lepton Radiometry', cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
             cv2.setMouseCallback('Lepton Radiometry', mouse_callback)
 
             cv2.createTrackbar(
@@ -221,21 +212,17 @@ def main():
                     thermal_data = data.copy()
                     conv_data = ktof(thermal_data)
 
-                    # Determine adaptive thermal image size (leave space for colorbar)
                     thermal_img_width = int(DISPLAY_WIDTH * THERMAL_WIDTH_RATIO)
                     thermal_img_height = DISPLAY_HEIGHT
 
-                    # Resize raw thermal to display area for visualization
                     display_data = cv2.resize(data[:, :], (thermal_img_width, thermal_img_height))
 
                     map_idx = cv2.getTrackbarPos("Colormap", "Lepton Radiometry")
                     current_colormap = COLORMAPS[map_idx][1]
                     img = raw_to_8bit(display_data)
 
-                    # Find min/max in original raw array (not the resized one)
                     minVal, maxVal, minLoc, maxLoc = cv2.minMaxLoc(thermal_data)
 
-                    # Map raw min/max locations to display coords using scale factors
                     raw_h, raw_w = thermal_data.shape
                     scale_x_factor = thermal_img_width / raw_w
                     scale_y_factor = thermal_img_height / raw_h
@@ -247,15 +234,11 @@ def main():
 
                     if last_click_pos is not None and (time.time() - last_click_time) < 3:
                         x, y = last_click_pos
-                        # If the click was in the area of the thermal image, show marker
                         display_temperature(img, last_click_temp, (x, y), (0, 255, 0))
 
-                    # Create scaled colorbar to match thermal image height
                     colorbar_width = DISPLAY_WIDTH - thermal_img_width
                     if colorbar_width < scale_x(40):
-                        # Ensure minimum width for readability
                         colorbar_width = scale_x(40)
-                        # if colorbar pushes total width > DISPLAY_WIDTH, reduce thermal_img_width
                         if thermal_img_width + colorbar_width > DISPLAY_WIDTH:
                             thermal_img_width = DISPLAY_WIDTH - colorbar_width
                             img = cv2.resize(raw_to_8bit(cv2.resize(data[:, :], (thermal_img_width, thermal_img_height))),
@@ -263,13 +246,11 @@ def main():
 
                     colorbar = create_colorbar(ktof(maxVal), ktof(minVal), height=thermal_img_height, width=colorbar_width)
 
-                    # Ensure colorbar height matches image height
                     if colorbar.shape[0] != img.shape[0]:
                         colorbar = cv2.resize(colorbar, (colorbar.shape[1], img.shape[0]))
 
                     display_img = np.hstack((img, colorbar))
 
-                    # Put current colormap name on the thermal image (scaled positions and fonts)
                     cv2.putText(img, f"{COLORMAPS[map_idx][0]}", (scale_x(10), scale_y(30)),
                                 cv2.FONT_HERSHEY_SIMPLEX, font_scale(0.6), (255,255,255), thickness())
 
