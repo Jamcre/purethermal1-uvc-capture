@@ -54,14 +54,15 @@ TOP_MARGIN = scale_y(10)
 BUF_SIZE = 2
 q = Queue(BUF_SIZE)
 
-COLORMAPS = [
-    ("TURBO", cv2.COLORMAP_TURBO),
-    ("INFERNO", cv2.COLORMAP_INFERNO),
-    ("JET", cv2.COLORMAP_JET),
-    ("HOT", cv2.COLORMAP_HOT),
-    ("GRAY", cv2.COLORMAP_BONE)
-]
-current_colormap = cv2.COLORMAP_TURBO
+# NEW DICTIONARY FOR COLORMAP LOOKUP
+COLORMAPS = {
+    "TURBO": cv2.COLORMAP_TURBO,
+    "INFERNO": cv2.COLORMAP_INFERNO,
+    "JET": cv2.COLORMAP_JET,
+    "HOT": cv2.COLORMAP_HOT,
+    "GRAY": cv2.COLORMAP_BONE
+}
+current_colormap = COLORMAPS["TURBO"]
 
 last_click_pos = None
 last_click_temp = None
@@ -201,13 +202,16 @@ def main():
             cv2.setWindowProperty('Lepton Radiometry', cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
             cv2.setMouseCallback('Lepton Radiometry', mouse_callback)
 
+            # NEW TRACKBAR WITH COLORMAP DICTIONARY
+            colormap_names = list(COLORMAPS.keys())
             cv2.createTrackbar(
                 "Colormap",
                 "Lepton Radiometry",
                 0,
-                len(COLORMAPS)-1,
+                len(colormap_names) - 1,
                 lambda x: None
             )
+
 
             try:
                 while True:
@@ -222,9 +226,11 @@ def main():
                     thermal_img_height = DISPLAY_HEIGHT
 
                     display_data = cv2.resize(data[:, :], (thermal_img_width, thermal_img_height))
-
+                    
+                    # NEW DICTIONARY KEY LOOKUP
                     map_idx = cv2.getTrackbarPos("Colormap", "Lepton Radiometry")
-                    current_colormap = COLORMAPS[map_idx][1]
+                    current_colormap = COLORMAPS[colormap_names[map_idx]]
+                    
                     img = raw_to_8bit(display_data)
 
                     minVal, maxVal, minLoc, maxLoc = cv2.minMaxLoc(thermal_data)
@@ -257,9 +263,17 @@ def main():
 
                     display_img = np.hstack((img, colorbar))
 
-                    cv2.putText(img, f"{COLORMAPS[map_idx][0]}", (scale_x(10), TOP_MARGIN + scale_y(20)),
-                                cv2.FONT_HERSHEY_SIMPLEX, font_scale(0.6), (255,255,255), thickness())
-
+                    # NEW COLORMAP DISPLAY
+                    cv2.putText(
+                        img,
+                        f"{colormap_names[map_idx]}",
+                        (scale_x(10), TOP_MARGIN + scale_y(20)),
+                        cv2.FONT_HERSHEY_SIMPLEX,
+                        font_scale(0.6),
+                        (255, 255, 255),
+                        thickness()
+                    )
+                    
                     cv2.imshow('Lepton Radiometry', display_img)
 
                     current_time = time.time()
