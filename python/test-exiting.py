@@ -23,7 +23,7 @@ class DisplayConfig:
         self.ref_height = 480
         self.taskbar_height = 40  # Raspbian taskbar (adjust if needed)
         self.window_margins = {
-            'top': 30,    # Extra space for window decorations
+            'top': 0,    # Extra space for window decorations
             'left': 0,
             'right': 0,
             'bottom': self.taskbar_height
