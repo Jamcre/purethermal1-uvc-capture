@@ -133,7 +133,7 @@ def marker_size():
     return max(5, display.scale(15, 'x'))
 
 def thickness():
-    return max(1, display.scale(1, 'y'))
+    return max(2, display.scale(1, 'y'))
 
 def create_colorbar(min_temp, max_temp, height=None, width=None):
     if height is None:
