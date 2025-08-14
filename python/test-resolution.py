@@ -21,6 +21,12 @@ class DisplayConfig:
         self.ref_width = 640    # Original development reference
         self.ref_height = 480
         self.taskbar_height = 40  # Raspbian taskbar (adjust if needed)
+        self.window_margins = {
+            'top': 30,    # Extra space for window decorations
+            'left': 0,
+            'right': 0,
+            'bottom': self.taskbar_height
+        }
         self.font_scale_multiplier = 1.8
         self.update_resolution()
 
@@ -33,17 +39,22 @@ class DisplayConfig:
             self.raw_width = int(res[0])
             self.raw_height = int(res[1])
             
-            # Apply taskbar compensation
-            self.display_width = self.raw_width
-            self.display_height = self.raw_height - self.taskbar_height
+            # Calculate usable space after accounting for margins
+            self.display_width = self.raw_width - (self.window_margins['left'] + self.window_margins['right'])
+            self.display_height = self.raw_height - (self.window_margins['top'] + self.window_margins['bottom'])
             
             # Scaling factors (maintaining original 640x480 ratios)
             self.scale_x = self.display_width / self.ref_width
             self.scale_y = self.display_height / self.ref_height
+            
+            print(f"Detected resolution: {self.raw_width}x{self.raw_height}")
+            print(f"Usable area: {self.display_width}x{self.display_height}")
         except Exception as e:
             print(f"Resolution detection failed, using fallback 800x480: {e}")
-            self.display_width = 800
-            self.display_height = 480 - self.taskbar_height
+            self.raw_width = 800
+            self.raw_height = 480
+            self.display_width = 800 - (self.window_margins['left'] + self.window_margins['right'])
+            self.display_height = 480 - (self.window_margins['top'] + self.window_margins['bottom'])
             self.scale_x = self.display_width / self.ref_width
             self.scale_y = self.display_height / self.ref_height
 
@@ -216,8 +227,14 @@ def main():
                 print("uvc_start_streaming failed: {0}".format(res))
                 exit(1)
 
+            # Window setup with proper positioning
             cv2.namedWindow('Lepton Radiometry', cv2.WINDOW_NORMAL)
-            cv2.setWindowProperty('Lepton Radiometry', cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+            cv2.moveWindow('Lepton Radiometry', 
+                         display.window_margins['left'], 
+                         display.window_margins['top'])
+            cv2.resizeWindow('Lepton Radiometry', 
+                           display.display_width, 
+                           display.display_height)
             cv2.setMouseCallback('Lepton Radiometry', mouse_callback)
 
             colormap_names = list(COLORMAPS.keys())
