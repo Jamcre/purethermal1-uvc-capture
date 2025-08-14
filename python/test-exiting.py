@@ -139,7 +139,7 @@ def create_colorbar(min_temp, max_temp, height=None, width=None):
     if height is None:
         height = display.display_height - EXIT_BUTTON_HEIGHT  # Reserve space for exit button
     if width is None:
-        width = max(40, display.scale(int(display.ref_width * (1 - THERMAL_WIDTH_RATIO)), 'x'))
+        width = display.scale(50, 'x')  # Fixed safe width
 
     gradient = np.linspace(0, 255, height).astype(np.uint8)
     gradient = np.tile(gradient, (width, 1)).T
@@ -188,7 +188,6 @@ def mouse_callback(event, x, y, flags, param):
     
     if event == cv2.EVENT_LBUTTONDOWN:
         if x < thermal_img_width:
-            # Temperature measurement click
             last_click_pos = (x, y)
             if thermal_data is not None:
                 raw_h, raw_w = thermal_data.shape
@@ -202,7 +201,6 @@ def mouse_callback(event, x, y, flags, param):
                 last_click_time = time.time()
                 print(f"Clicked at ({x}, {y}): {ktof(last_click_temp):.1f} degF")
         else:
-            # Click in colorbar area
             colorbar_height = display.display_height
             exit_button_top = colorbar_height - EXIT_BUTTON_HEIGHT
             
@@ -254,7 +252,7 @@ def main():
                 print("uvc_start_streaming failed: {0}".format(res))
                 exit(1)
 
-            # Window setup with proper positioning
+            # Window setup
             cv2.namedWindow('Lepton Radiometry', cv2.WINDOW_NORMAL)
             cv2.moveWindow('Lepton Radiometry', 
                          display.window_margins['left'], 
@@ -279,21 +277,26 @@ def main():
                     if data is None:
                         break
 
+                    # --- Display and colorbar handling (updated) ---
                     thermal_data = data.copy()
                     conv_data = ktof(thermal_data)
 
-                    thermal_img_width = int(display.display_width * THERMAL_WIDTH_RATIO)
                     thermal_img_height = display.display_height
+                    MIN_COLORBAR_WIDTH = display.scale(50, 'x')
+                    thermal_img_width = int(display.display_width * THERMAL_WIDTH_RATIO)
+                    colorbar_width = display.display_width - thermal_img_width
 
-                    display_data = cv2.resize(data[:, :], (thermal_img_width, thermal_img_height))
-                    
-                    map_idx = cv2.getTrackbarPos("Colormap", "Lepton Radiometry")
-                    current_colormap = COLORMAPS[colormap_names[map_idx]]
-                    
+                    if colorbar_width < MIN_COLORBAR_WIDTH:
+                        colorbar_width = MIN_COLORBAR_WIDTH
+                        thermal_img_width = display.display_width - colorbar_width
+
+                    display_data = cv2.resize(thermal_data[:, :], (thermal_img_width, thermal_img_height))
                     img = raw_to_8bit(display_data)
 
-                    minVal, maxVal, minLoc, maxLoc = cv2.minMaxLoc(thermal_data)
+                    map_idx = cv2.getTrackbarPos("Colormap", "Lepton Radiometry")
+                    current_colormap = COLORMAPS[colormap_names[map_idx]]
 
+                    minVal, maxVal, minLoc, maxLoc = cv2.minMaxLoc(thermal_data)
                     raw_h, raw_w = thermal_data.shape
                     scale_x_factor = thermal_img_width / raw_w
                     scale_y_factor = thermal_img_height / raw_h
@@ -307,22 +310,14 @@ def main():
                         x, y = last_click_pos
                         display_temperature(img, last_click_temp, (x, y), (0, 255, 0))
 
-                    colorbar_width = display.display_width - thermal_img_width
-                    if colorbar_width < display.scale(40, 'x'):
-                        colorbar_width = display.scale(40, 'x')
-                        if thermal_img_width + colorbar_width > display.display_width:
-                            thermal_img_width = display.display_width - colorbar_width
-                            img = cv2.resize(raw_to_8bit(cv2.resize(data[:, :], (thermal_img_width, thermal_img_height))),
-                                             (thermal_img_width, thermal_img_height))
-
                     colorbar = create_colorbar(ktof(maxVal), ktof(minVal), 
-                                             height=thermal_img_height, width=colorbar_width)
+                                               height=thermal_img_height, width=colorbar_width)
 
                     if colorbar.shape[0] != img.shape[0]:
                         colorbar = cv2.resize(colorbar, (colorbar.shape[1], img.shape[0]))
 
                     display_img = np.hstack((img, colorbar))
-                    
+
                     cv2.putText(
                         img,
                         f"{colormap_names[map_idx]}",
@@ -332,7 +327,7 @@ def main():
                         (255, 255, 255),
                         thickness()
                     )
-                    
+
                     cv2.imshow('Lepton Radiometry', display_img)
                     cv2.waitKey(1)
 
