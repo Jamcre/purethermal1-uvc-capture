@@ -125,7 +125,7 @@ def raw_to_8bit(data):
 def display_temperature(img, val_k, loc, color):
     val = ktof(val_k)
     cv2.putText(img, f"{val:.1f} degF", loc, cv2.FONT_HERSHEY_SIMPLEX, 
-               display.font_scale(0.75), color, thickness())
+               display.font_scale(0.5), color, thickness())
     x, y = loc
     cv2.drawMarker(img, (x, y), color, cv2.MARKER_CROSS, marker_size(), thickness())
 
@@ -146,7 +146,7 @@ def create_colorbar(min_temp, max_temp, height=None, width=None):
     colorbar = cv2.applyColorMap(gradient, current_colormap)
 
     font = cv2.FONT_HERSHEY_SIMPLEX
-    fs = display.font_scale(0.75)
+    fs = display.font_scale(0.45)
     th = thickness()
 
     cv2.putText(colorbar, f"{max_temp:.1f} degF", (display.scale(5, 'x'), TOP_MARGIN + display.scale(10, 'y')), 
