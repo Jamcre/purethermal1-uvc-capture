@@ -126,7 +126,7 @@ def create_colorbar(min_temp, max_temp, height=None, width=None):
     if height is None:
         height = display.display_height
     if width is None:
-        width = max(40, display.scale(int(display.ref_width * (1 - THERMAL_WIDTH_RATIO)), 'x')
+        width = max(40, display.scale(int(display.ref_width * (1 - THERMAL_WIDTH_RATIO)), 'x'))
 
     gradient = np.linspace(0, 255, height).astype(np.uint8)
     gradient = np.tile(gradient, (width, 1)).T
