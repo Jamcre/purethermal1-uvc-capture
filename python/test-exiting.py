@@ -28,7 +28,7 @@ class DisplayConfig:
             'right': 0,
             'bottom': self.taskbar_height
         }
-        self.font_scale_multiplier = 1.8
+        self.font_scale_multiplier = 3.0
         self.update_resolution()
 
     def update_resolution(self):
