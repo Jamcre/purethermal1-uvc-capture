@@ -21,7 +21,7 @@ class DisplayConfig:
     def __init__(self):
         self.ref_width = 640    # Original development reference
         self.ref_height = 480
-        self.taskbar_height = 0  # Raspbian taskbar (adjust if needed)
+        self.taskbar_height = 20  # Raspbian taskbar (adjust if needed)
         self.window_margins = {
             'top': 0,    # Extra space for window decorations
             'left': 0,
